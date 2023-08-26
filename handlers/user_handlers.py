@@ -1,13 +1,15 @@
 import asyncpg.connection
-from aiogram import Router, F
-from aiogram.filters import Command, Text, StateFilter
-from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove
+from aiogram import F, Router
+from aiogram.filters import Command, StateFilter, Text
 from aiogram.fsm.context import FSMContext
-from FSM import FSM
 from aiogram.fsm.state import default_state
-from services.services import get_list_of_dishes, get_recipe, add_dish_to_favorites, get_favorite_recipe, delete_recipe
-from keyboards.keyboards import create_kb
+from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 
+from FSM import FSM
+from keyboards.keyboards import create_kb
+from services.services import (add_dish_to_favorites, delete_recipe,
+                               get_favorite_recipe, get_list_of_dishes,
+                               get_recipe)
 
 router = Router()
 

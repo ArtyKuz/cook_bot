@@ -1,12 +1,11 @@
 import asyncpg.connection
 from aiogram import Router
 from aiogram.filters import Command, StateFilter
-from aiogram.types import Message
-from aiogram.fsm.state import default_state
-from aiogram.filters.state import State
 from aiogram.fsm.context import FSMContext
-from FSM import FSM
+from aiogram.fsm.state import default_state
+from aiogram.types import Message
 
+from FSM import FSM
 from keyboards.keyboards import create_kb
 from services.services import add_user_in_db, get_favorites_dishes
 

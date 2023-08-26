@@ -1,7 +1,7 @@
-from typing import Callable, Dict, Any, Awaitable
+from typing import Any, Awaitable, Callable, Dict
 
 import asyncpg
-from aiogram import types, BaseMiddleware
+from aiogram import BaseMiddleware, types
 from aiogram.types import Message
 
 

@@ -1,9 +1,9 @@
+import asyncio
+
+import aiohttp
 import asyncpg.connection
 import bs4
-import requests
-import aiohttp
 from fake_useragent import UserAgent
-import asyncio
 
 ua = UserAgent()
 
@@ -12,7 +12,6 @@ async def get_list_of_dishes(dish: str) -> dict[str: dict] | bool:
     async with aiohttp.ClientSession() as session:
         fake_ua = {'user-agent': ua.random}
         await asyncio.sleep(0.5)
-        # cite = requests.get(f'https://eda.ru/recipesearch?q={dish.lower()}')
         cite = await session.get(f'https://eda.ru/recipesearch?q={dish.lower()}', headers=fake_ua)
         if cite.status == 200:
             bs = bs4.BeautifulSoup(await cite.text(), 'lxml')
@@ -43,12 +42,9 @@ async def get_list_of_dishes(dish: str) -> dict[str: dict] | bool:
 
 async def get_recipe(url: str) -> str | bool:
     async with aiohttp.ClientSession() as session:
-        # print(session)
         fake_ua = {'user-agent': ua.random}
         await asyncio.sleep(0.5)
-        # cite = requests.get(f'https://eda.ru{url}')
         cite = await session.get(f'https://eda.ru{url}', headers=fake_ua)
-        # print(cite)
         if cite.status == 200:
             bs = bs4.BeautifulSoup(await cite.text(), 'lxml')
             bs = bs.find_all('div', class_='emotion-7yevpr')
@@ -78,7 +74,7 @@ async def add_user_in_db(user_id, username, conn: asyncpg.connection.Connection)
         INSERT INTO users VALUES($1, $2)''', user_id, username)
 
 
-async def add_dish_to_favorites(user_id, dish, recipe, conn: asyncpg.connection.Connection):
+async def add_dish_to_favorites(user_id, dish, recipe, conn: asyncpg.connection.Connection) -> bool:
     dish_id = await conn.fetchval('''
     SELECT dish_id FROM dishes WHERE title = $1''', dish)
     if dish_id:
@@ -103,13 +99,13 @@ async def get_favorites_dishes(user_id, conn: asyncpg.connection.Connection) -> 
     return {str(dish['dish_id']): dish['title'] for dish in favorites_dishes}
 
 
-async def get_favorite_recipe(dish_id, conn: asyncpg.connection.Connection):
+async def get_favorite_recipe(dish_id, conn: asyncpg.connection.Connection) -> str:
     recipe = await conn.fetchval('''
     SELECT recipe FROM dishes WHERE dish_id = $1''', int(dish_id))
     return recipe
 
 
-async def delete_recipe(user_id, data: dict, conn: asyncpg.connection.Connection):
+async def delete_recipe(user_id, data: dict, conn: asyncpg.connection.Connection) -> dict:
     await conn.execute('''
     DELETE FROM favorite_dishes WHERE user_id = $1 AND dish_id = $2''', user_id, int(data['favorite_dish_id']))
     del data['favorites_dishes'][data['favorite_dish_id']]
