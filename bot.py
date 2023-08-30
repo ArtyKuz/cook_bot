@@ -9,20 +9,10 @@ from dotenv import load_dotenv
 
 from handlers import menu_handlers, user_handlers
 from middlewares.middlewares import DBMiddleware
+from config import bot, dp
 
 
 async def main():
-    load_dotenv()
-
-    token: str = os.getenv('TOKEN')
-
-    bot = Bot(token=token, parse_mode='HTML')
-    # Инициализируем Redis
-    redis: Redis = Redis(host='localhost', db=1)
-
-    storage: RedisStorage = RedisStorage(redis=redis)
-
-    dp: Dispatcher = Dispatcher(storage=storage)
 
     dp.include_router(menu_handlers.router)
     dp.include_router(user_handlers.router)
@@ -47,6 +37,7 @@ async def main():
     # Добавляем мидлвари в диспетчер
     dp.update.middleware(db_middleware)
     await dp.start_polling(bot)
+
 
 if __name__ == '__main__':
     asyncio.run(main())

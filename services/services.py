@@ -112,3 +112,21 @@ async def delete_recipe(user_id, data: dict, conn: asyncpg.connection.Connection
     return data
 
 
+async def check_count_recipes(user_id, conn: asyncpg.connection.Connection) -> bool:
+    """Функция проверяет, имеет ли пользователь Премиум доступ
+    для безлимитного добавления избранных рецептов, в ином случае
+    количество избранных рецептов не может превышать 10"""
+
+    result = await conn.fetchval('''
+    SELECT premium FROM users WHERE user_id = $1''', user_id)
+    if result:
+        return True
+    else:
+        count = await conn.fetchval('''
+        SELECT count(*) FROM favorite_dishes WHERE user_id = $1''', user_id)
+        return True if count < 10 else False
+
+
+async def get_premium(user_id, conn: asyncpg.connection.Connection) -> None:
+    await conn.execute('''
+    UPDATE users SET premium = True WHERE user_id = $1''', user_id)

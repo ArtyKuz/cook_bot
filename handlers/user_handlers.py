@@ -1,17 +1,51 @@
 import asyncpg.connection
-from aiogram import F, Router
+import os
+from aiogram import F, Router, types
 from aiogram.filters import Command, StateFilter, Text
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import default_state
-from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
-
+from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove, ContentType
+from dotenv import load_dotenv
+from config import bot
 from FSM import FSM
 from keyboards.keyboards import create_kb
 from services.services import (add_dish_to_favorites, delete_recipe,
                                get_favorite_recipe, get_list_of_dishes,
-                               get_recipe)
+                               get_recipe, check_count_recipes, get_premium)
 
+
+load_dotenv()
 router = Router()
+
+# buy
+@router.callback_query(~StateFilter(default_state), Text(text='Оформить Premium доступ 💎'))
+async def buy(callback: CallbackQuery):
+    await callback.answer()
+    PRICE = types.LabeledPrice(label="Premium доступ", amount=100 * 100)  # в копейках (руб)
+    await bot.send_invoice(callback.message.chat.id,
+                           title="Активация Premium доступа",
+                           description="После оплаты Premium доступ будет действовать бессрочно.",
+                           provider_token=os.getenv('PAYMENTS_TOKEN'),
+                           currency="rub",
+                           is_flexible=False,
+                           prices=[PRICE],
+                           start_parameter="subscription",
+                           payload="test-invoice-payload")
+
+
+@router.pre_checkout_query(lambda query: True)
+async def pre_checkout_query(pre_checkout_q: types.PreCheckoutQuery):
+    await bot.answer_pre_checkout_query(pre_checkout_q.id, ok=True)
+
+
+# successful payment
+@router.message(F.successful_payment)
+async def successful_payment(message: types.Message, conn: asyncpg.connection.Connection):
+    await get_premium(message.from_user.id, conn)
+    await message.answer(f"<b>Premium</b> доступ успешно активирован!!!\n\n"
+                         f"Теперь вы можете добавлять не ограниченное количество рецептов в избранное!",
+                         reply_markup=create_kb(1, 'Вернуться к рецептам 📃',
+                                                   'Выбрать другое блюдо 🍲'))
 
 
 @router.callback_query(Text(text=['Выбрать другое блюдо 🍲',
@@ -25,7 +59,8 @@ async def select_dishes(callback: CallbackQuery, state: FSMContext):
 
 
 
-@router.callback_query(Text(text='Выбрать другой рецепт 📃'), ~StateFilter(default_state))
+@router.callback_query(Text(text=['Выбрать другой рецепт 📃',
+                            'Вернуться к рецептам 📃']), ~StateFilter(default_state))
 async def back_dishes(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
     data = await state.get_data()
@@ -49,15 +84,23 @@ async def list_of_dishes(message: Message, state: FSMContext):
 @router.callback_query(StateFilter(FSM.get_recipe), Text(text='Добавить в избранное ❤'))
 async def add_to_favorites(callback: CallbackQuery, state: FSMContext, conn: asyncpg.connection.Connection):
     await callback.answer()
-    data = await state.get_data()
-    result = await add_dish_to_favorites(callback.from_user.id, data['current_dish'],  data['recipe'], conn)
-    if result:
-        await callback.message.answer('Рецепт успешно добавлен в избранное!',
-                                      reply_markup=create_kb(1, 'Выбрать другой рецепт 📃',
-                                                             'Выбрать другое блюдо 🍲'))
+    if await check_count_recipes(callback.from_user.id, conn):
+        data = await state.get_data()
+        result = await add_dish_to_favorites(callback.from_user.id, data['current_dish'],  data['recipe'], conn)
+        if result:
+            await callback.message.answer('Рецепт успешно добавлен в избранное!',
+                                          reply_markup=create_kb(1, 'Выбрать другой рецепт 📃',
+                                                                 'Выбрать другое блюдо 🍲'))
+        else:
+            await callback.message.answer('Данный рецепт уже находится в списке ваших избранных рецептов!',
+                                          reply_markup=create_kb(1, 'Выбрать другой рецепт 📃',
+                                                                 'Выбрать другое блюдо 🍲'))
     else:
-        await callback.message.answer('Данный рецепт уже находится в списке ваших избранных рецептов!',
-                                      reply_markup=create_kb(1, 'Выбрать другой рецепт 📃',
+        await callback.message.answer('Вы не можете добавлять в избранное более 10-ти рецептов, '
+                                      'чтобы добавлять неограниченное количество рецептов в избранное оформите '
+                                      '<b>Premium доступ!</b>',
+                                      reply_markup=create_kb(1, 'Оформить Premium доступ 💎',
+                                                             'Выбрать другой рецепт 📃',
                                                              'Выбрать другое блюдо 🍲'))
 
 
@@ -108,7 +151,6 @@ async def favorite_recipe(callback: CallbackQuery, state: FSMContext, conn: asyn
                                      reply_markup=create_kb(1,
                                                             'Удалить рецепт из избранных 🗑',
                                                             'Избранные рецепты ❤'))
-
 
 
 
