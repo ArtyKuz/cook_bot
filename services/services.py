@@ -96,7 +96,17 @@ async def add_dish_to_favorites(user_id, dish, recipe, conn: asyncpg.connection.
 async def get_favorites_dishes(user_id, conn: asyncpg.connection.Connection) -> dict:
     favorites_dishes = await conn.fetch('''
     SELECT dish_id, title FROM favorite_dishes JOIN dishes USING(dish_id) WHERE user_id = $1''', user_id)
-    return {str(dish['dish_id']): dish['title'] for dish in favorites_dishes}
+    favorites_dishes = {str(dish['dish_id']): dish['title'] for dish in favorites_dishes}
+    pagination = {}
+    page = '1'
+    pagination[page] = []
+    for i in favorites_dishes.items():
+        if len(pagination[page]) < 5:
+            pagination[page].append(i)
+        else:
+            page = str(int(page) + 1)
+            pagination[page] = [i]
+    return pagination
 
 
 async def get_favorite_recipe(dish_id, conn: asyncpg.connection.Connection) -> str:
@@ -111,9 +121,7 @@ async def delete_recipe(user_id, data: dict, conn: asyncpg.connection.Connection
     """Функция для удаления рецепта из списка избранных"""
 
     await conn.execute('''
-    DELETE FROM favorite_dishes WHERE user_id = $1 AND dish_id = $2''', user_id, int(data['favorite_dish_id']))
-    del data['favorites_dishes'][data['favorite_dish_id']]
-    return data
+        DELETE FROM favorite_dishes WHERE user_id = $1 AND dish_id = $2''', user_id, int(data['favorite_dish_id']))
 
 
 async def check_count_recipes(user_id, conn: asyncpg.connection.Connection) -> bool:

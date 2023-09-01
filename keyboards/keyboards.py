@@ -29,3 +29,34 @@ def create_kb(width: int, *args, **kwargs) -> InlineKeyboardMarkup:
 
     # Возвращаем объект инлайн-клавиатуры
     return kb_builder.as_markup(resize_keyboard=True)
+
+
+def create_pagination_kb(width: int, page, dishes, *args) -> InlineKeyboardMarkup:
+
+    kb_builder: InlineKeyboardBuilder = InlineKeyboardBuilder()
+    buttons: list[InlineKeyboardButton] = []
+
+    current_dishes = dishes[str(page)]
+    for callback, text in current_dishes:
+        buttons.append(InlineKeyboardButton(
+            text=text,
+            callback_data=callback))
+    kb_builder.row(*buttons, width=width)
+    buttons: list[InlineKeyboardButton] = []
+    if page - 1 > 0:
+        buttons.append(InlineKeyboardButton(
+            text='◀',
+            callback_data='back'))
+    if dishes.get(str(page + 1)):
+        buttons.append(InlineKeyboardButton(
+            text='▶',
+            callback_data='forward'))
+    kb_builder.row(*buttons, width=2)
+    buttons: list[InlineKeyboardButton] = []
+    if args:
+        for button in args:
+            buttons.append(InlineKeyboardButton(
+                text=button,
+                callback_data=button))
+    kb_builder.row(*buttons, width=width)
+    return kb_builder.as_markup(resize_keyboard=True)

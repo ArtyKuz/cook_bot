@@ -8,7 +8,7 @@ from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove, ContentTy
 from dotenv import load_dotenv
 from config import bot
 from FSM import FSM
-from keyboards.keyboards import create_kb
+from keyboards.keyboards import create_kb, create_pagination_kb
 from services.services import (add_dish_to_favorites, delete_recipe,
                                get_favorite_recipe, get_list_of_dishes,
                                get_recipe, check_count_recipes, get_premium)
@@ -120,23 +120,30 @@ async def recipe(callback: CallbackQuery, state: FSMContext):
                              reply_markup=create_kb(1, 'Выбрать другое блюдо 🍲', **data['titles']))
 
 
-@router.callback_query(StateFilter(FSM.favorites), Text(text='Избранные рецепты ❤'))
+@router.callback_query(StateFilter(FSM.favorites), Text(text=['Избранные рецепты ❤',
+                                                        'back',
+                                                        'forward']))
 async def all_favorites(callback: CallbackQuery, state: FSMContext, conn: asyncpg.connection.Connection):
     await callback.answer()
     data = await state.get_data()
     favorites_dishes = data['favorites_dishes']
+    if callback.data in ['back', 'forward']:
+        data['page'] = data['page'] - 1 if callback.data == 'back' else data['page'] + 1
+    page = data['page']
+    await state.update_data(data)
     await callback.message.answer(f'Ваши избранные рецепты ❤',
-                         reply_markup=create_kb(1, 'Вернуться к поиску других блюд 🍲', **favorites_dishes))
+                         reply_markup=create_pagination_kb(1, page, favorites_dishes,
+                                                           'Вернуться к поиску других блюд 🍲'))
 
 
 @router.callback_query(StateFilter(FSM.favorites), Text(text='Удалить рецепт из избранных 🗑'))
 async def delete_recipe_handler(callback: CallbackQuery, state: FSMContext, conn: asyncpg.connection.Connection):
     data = await state.get_data()
-    data = await delete_recipe(callback.from_user.id, data, conn)
+    await delete_recipe(callback.from_user.id, data, conn)
     await state.update_data(data)
-    await callback.message.edit_text('Рецепт удален из списка избранных!',
+    await callback.message.edit_text('Рецепт удален из списка избранных!\n\n'
+                                     'Вернуться к избранным рецептам - \n/favorites',
                                      reply_markup=create_kb(1,
-                                                            'Избранные рецепты ❤',
                                                             'Вернуться к поиску других блюд 🍲'))
 
 
