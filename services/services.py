@@ -40,7 +40,7 @@ async def get_list_of_dishes(dish: str) -> dict[str: dict] | bool:
         return False
 
 
-async def get_recipe(url: str) -> str | bool:
+async def get_recipe(url: str, name_dish: str) -> str | bool:
     async with aiohttp.ClientSession() as session:
         fake_ua = {'user-agent': ua.random}
         await asyncio.sleep(0.5)
@@ -49,7 +49,7 @@ async def get_recipe(url: str) -> str | bool:
             bs = bs4.BeautifulSoup(await cite.text(), 'lxml')
             bs = bs.find_all('div', class_='emotion-7yevpr')
             if bs:
-                recipe = 'Ингридиенты:\n\n'
+                recipe = f'<b>{name_dish}</b>\n\nИнгридиенты:\n\n'
                 for ind, i in enumerate(bs, 1):
                     recipe += f'{ind}. {i.find_next("span").text} - {i.find_next("span", class_="emotion-bsdd3p").text}\n'
                 recipe += '\n'
@@ -100,12 +100,16 @@ async def get_favorites_dishes(user_id, conn: asyncpg.connection.Connection) -> 
 
 
 async def get_favorite_recipe(dish_id, conn: asyncpg.connection.Connection) -> str:
+    """Функция для получения текста рецепта"""
+
     recipe = await conn.fetchval('''
     SELECT recipe FROM dishes WHERE dish_id = $1''', int(dish_id))
     return recipe
 
 
 async def delete_recipe(user_id, data: dict, conn: asyncpg.connection.Connection) -> dict:
+    """Функция для удаления рецепта из списка избранных"""
+
     await conn.execute('''
     DELETE FROM favorite_dishes WHERE user_id = $1 AND dish_id = $2''', user_id, int(data['favorite_dish_id']))
     del data['favorites_dishes'][data['favorite_dish_id']]

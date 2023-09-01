@@ -108,7 +108,7 @@ async def add_to_favorites(callback: CallbackQuery, state: FSMContext, conn: asy
 async def recipe(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
     data = await state.get_data()
-    recipe = await get_recipe(data['dishes'].get(callback.data))
+    recipe = await get_recipe(data['dishes'].get(callback.data), data['titles'].get(callback.data))
     data['recipe'] = recipe
     data['current_dish'] = data['titles'][callback.data]
     await state.update_data(data)
