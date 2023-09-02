@@ -2,14 +2,11 @@ import asyncio
 import os
 
 import asyncpg
-from aiogram import Bot, Dispatcher
-from aiogram.fsm.storage.redis import Redis, RedisStorage
 from aiogram.types import BotCommand
-from dotenv import load_dotenv
 
+from config import bot, dp
 from handlers import menu_handlers, user_handlers
 from middlewares.middlewares import DBMiddleware
-from config import bot, dp
 
 
 async def main():

@@ -1,6 +1,7 @@
+import os
+
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.redis import Redis, RedisStorage
-import os
 from dotenv import load_dotenv
 
 load_dotenv()

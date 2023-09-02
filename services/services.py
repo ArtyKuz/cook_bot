@@ -67,6 +67,8 @@ async def get_recipe(url: str, name_dish: str) -> str | bool:
 
 
 async def add_user_in_db(user_id, username, conn: asyncpg.connection.Connection):
+    """Функция добавляет пользователя в БД"""
+
     user = await conn.fetchval('''
     SELECT user_id FROM users WHERE user_id = $1''', user_id)
     if not user:
@@ -75,6 +77,8 @@ async def add_user_in_db(user_id, username, conn: asyncpg.connection.Connection)
 
 
 async def add_dish_to_favorites(user_id, dish, recipe, conn: asyncpg.connection.Connection) -> bool:
+    """Функция """
+
     dish_id = await conn.fetchval('''
     SELECT dish_id FROM dishes WHERE title = $1''', dish)
     if dish_id:
@@ -94,6 +98,8 @@ async def add_dish_to_favorites(user_id, dish, recipe, conn: asyncpg.connection.
 
 
 async def get_favorites_dishes(user_id, conn: asyncpg.connection.Connection) -> dict:
+    """Функция для получения списка избранных блюд пользователя"""
+
     favorites_dishes = await conn.fetch('''
     SELECT dish_id, title FROM favorite_dishes JOIN dishes USING(dish_id) WHERE user_id = $1''', user_id)
     favorites_dishes = {str(dish['dish_id']): dish['title'] for dish in favorites_dishes}
@@ -140,5 +146,7 @@ async def check_count_recipes(user_id, conn: asyncpg.connection.Connection) -> b
 
 
 async def get_premium(user_id, conn: asyncpg.connection.Connection) -> None:
+    """Устанавливает Премиум статус для пользователя"""
+
     await conn.execute('''
     UPDATE users SET premium = True WHERE user_id = $1''', user_id)

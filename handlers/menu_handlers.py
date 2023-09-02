@@ -6,7 +6,7 @@ from aiogram.fsm.state import default_state
 from aiogram.types import Message
 
 from FSM import FSM
-from keyboards.keyboards import create_kb, create_pagination_kb
+from keyboards.keyboards import create_pagination_kb
 from services.services import add_user_in_db, get_favorites_dishes
 
 router = Router()

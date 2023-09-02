@@ -1,18 +1,20 @@
-import asyncpg.connection
 import os
+
+import asyncpg.connection
 from aiogram import F, Router, types
 from aiogram.filters import Command, StateFilter, Text
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import default_state
-from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove, ContentType
+from aiogram.types import (CallbackQuery, ContentType, Message,
+                           ReplyKeyboardRemove)
 from dotenv import load_dotenv
+
 from config import bot
 from FSM import FSM
 from keyboards.keyboards import create_kb, create_pagination_kb
-from services.services import (add_dish_to_favorites, delete_recipe,
-                               get_favorite_recipe, get_list_of_dishes,
-                               get_recipe, check_count_recipes, get_premium)
-
+from services.services import (add_dish_to_favorites, check_count_recipes,
+                               delete_recipe, get_favorite_recipe,
+                               get_list_of_dishes, get_premium, get_recipe)
 
 load_dotenv()
 router = Router()

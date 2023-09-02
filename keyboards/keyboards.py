@@ -1,6 +1,5 @@
-from aiogram.types import (InlineKeyboardButton, InlineKeyboardMarkup,
-                           KeyboardButton, ReplyKeyboardMarkup)
-from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 
 def create_kb(width: int, *args, **kwargs) -> InlineKeyboardMarkup:
