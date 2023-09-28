@@ -33,7 +33,9 @@ async def main():
     db_middleware = DBMiddleware(pool)
     # Добавляем мидлвари в диспетчер
     dp.update.middleware(db_middleware)
+
     await dp.start_polling(bot)
+    await asyncio.Event().wait()
 
 
 if __name__ == '__main__':

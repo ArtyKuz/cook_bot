@@ -42,11 +42,16 @@ async def dispatcher():
 
 @pytest.fixture(scope="session")
 def event_loop():
-    return asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        yield loop
+    finally:
+        loop.close()
 
 
 @pytest_asyncio.fixture(scope="session")
-async def session_maker():
+async def connection():
     # Определяем путь к файлу с переменными окружения
     env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
     # Загружаем переменные окружения из файла

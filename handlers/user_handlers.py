@@ -133,7 +133,7 @@ async def all_favorites(callback: CallbackQuery, state: FSMContext, conn: asyncp
         data['page'] = data['page'] - 1 if callback.data == 'back' else data['page'] + 1
     page = data['page']
     await state.update_data(data)
-    await callback.message.answer(f'Ваши избранные рецепты ❤',
+    await callback.message.edit_text(f'Ваши избранные рецепты ❤',
                          reply_markup=create_pagination_kb(1, page, favorites_dishes,
                                                            'Вернуться к поиску других блюд 🍲'))
 
@@ -142,7 +142,7 @@ async def all_favorites(callback: CallbackQuery, state: FSMContext, conn: asyncp
 async def delete_recipe_handler(callback: CallbackQuery, state: FSMContext, conn: asyncpg.connection.Connection):
     data = await state.get_data()
     await delete_recipe(callback.from_user.id, data, conn)
-    await state.update_data(data)
+    # await state.update_data(data)
     await callback.message.edit_text('Рецепт удален из списка избранных!\n\n'
                                      'Вернуться к избранным рецептам - \n/favorites',
                                      reply_markup=create_kb(1,

@@ -77,7 +77,7 @@ async def add_user_in_db(user_id, username, conn: asyncpg.connection.Connection)
 
 
 async def add_dish_to_favorites(user_id, dish, recipe, conn: asyncpg.connection.Connection) -> bool:
-    """Функция """
+    """Добавляет рецепт в список избранных"""
 
     dish_id = await conn.fetchval('''
     SELECT dish_id FROM dishes WHERE title = $1''', dish)
@@ -123,7 +123,7 @@ async def get_favorite_recipe(dish_id, conn: asyncpg.connection.Connection) -> s
     return recipe
 
 
-async def delete_recipe(user_id, data: dict, conn: asyncpg.connection.Connection) -> dict:
+async def delete_recipe(user_id, data: dict, conn: asyncpg.connection.Connection):
     """Функция для удаления рецепта из списка избранных"""
 
     await conn.execute('''

@@ -44,11 +44,11 @@ def create_pagination_kb(width: int, page, dishes, *args) -> InlineKeyboardMarku
     buttons: list[InlineKeyboardButton] = []
     if page - 1 > 0:
         buttons.append(InlineKeyboardButton(
-            text='◀',
+            text='Назад ⬅',
             callback_data='back'))
     if dishes.get(str(page + 1)):
         buttons.append(InlineKeyboardButton(
-            text='▶',
+            text='Вперед ➡',
             callback_data='forward'))
     kb_builder.row(*buttons, width=2)
     buttons: list[InlineKeyboardButton] = []
