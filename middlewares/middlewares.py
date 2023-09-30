@@ -1,12 +1,11 @@
 from typing import Any, Awaitable, Callable, Dict
 
-import asyncpg
-from aiogram import BaseMiddleware, types
+from aiogram import BaseMiddleware
 from aiogram.types import Message
 
 
 class DBMiddleware(BaseMiddleware):
-    def __init__(self, pool: asyncpg.pool.Pool):
+    def __init__(self, pool):
         super().__init__()
         self.pool = pool
 
@@ -16,6 +15,6 @@ class DBMiddleware(BaseMiddleware):
             event: Message,
             data: Dict[str, Any]
     ) -> Any:
-        async with self.pool.acquire() as conn:
-            data["conn"] = conn
+        async with self.pool() as session:
+            data["session"] = session
             await handler(event, data)

@@ -6,8 +6,8 @@ import pytest
 import pytest_asyncio
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.types import Message
 from dotenv import load_dotenv
-
 from mocked_bot import MockedBot
 
 

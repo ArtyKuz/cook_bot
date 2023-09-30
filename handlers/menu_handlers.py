@@ -1,9 +1,9 @@
-import asyncpg.connection
 from aiogram import Router
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import default_state
 from aiogram.types import Message
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from FSM import FSM
 from keyboards.keyboards import create_pagination_kb
@@ -15,8 +15,8 @@ router = Router()
 # Этот хэндлер будет срабатывать на команду "/start"
 @router.message(Command(commands=["start"]), StateFilter(default_state))
 @router.message(Command(commands=["start"]), ~StateFilter(default_state))
-async def process_start_command(message: Message, state: FSMContext, conn: asyncpg.connection.Connection):
-    await add_user_in_db(message.from_user.id, message.from_user.username, conn)
+async def process_start_command(message: Message, state: FSMContext, session: AsyncSession):
+    await add_user_in_db(message.from_user.id, message.from_user.username, session)
     await state.set_state(FSM.find_dishes)
     await message.answer(f'Привет {message.from_user.first_name}!\n\nЭто кулинарный бот!\n'
                          f'Напиши мне название любого блюда и я найду '
@@ -26,9 +26,9 @@ async def process_start_command(message: Message, state: FSMContext, conn: async
 # Этот хэндлер будет срабатывать на команду "/favorites"
 @router.message(Command(commands=['favorites']), StateFilter(default_state))
 @router.message(Command(commands=['favorites']), ~StateFilter(default_state))
-async def process_favorite_command(message: Message, state: FSMContext, conn: asyncpg.connection.Connection):
+async def process_favorite_command(message: Message, state: FSMContext, session: AsyncSession):
     data = await state.get_data()
-    favorites_dishes: dict = await get_favorites_dishes(message.from_user.id, conn)
+    favorites_dishes: dict = await get_favorites_dishes(message.from_user.id, session)
     data['favorites_dishes'] = favorites_dishes
     data['page'] = 1
     await state.update_data(data)

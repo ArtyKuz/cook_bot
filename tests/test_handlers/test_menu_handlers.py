@@ -6,7 +6,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.base import StorageKey
 from aiogram.methods import SendMessage
 
-from handlers.menu_handlers import process_start_command, process_help_command
+from handlers.menu_handlers import process_help_command, process_start_command
 from tests.utils import TEST_USER, TEST_USER_CHAT, get_message, get_update
 
 

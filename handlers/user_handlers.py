@@ -8,6 +8,7 @@ from aiogram.fsm.state import default_state
 from aiogram.types import (CallbackQuery, ContentType, Message,
                            ReplyKeyboardRemove)
 from dotenv import load_dotenv
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import bot
 from FSM import FSM
@@ -42,10 +43,10 @@ async def pre_checkout_query(pre_checkout_q: types.PreCheckoutQuery):
 
 # successful payment
 @router.message(F.successful_payment)
-async def successful_payment(message: types.Message, conn: asyncpg.connection.Connection):
-    await get_premium(message.from_user.id, conn)
+async def successful_payment(message: types.Message, session: AsyncSession):
+    await get_premium(message.from_user.id, session)
     await message.answer(f"<b>Premium</b> доступ успешно активирован!!!\n\n"
-                         f"Теперь вы можете добавлять не ограниченное количество рецептов в избранное!",
+                         f"Теперь вы можете добавлять неограниченное количество рецептов в избранное!",
                          reply_markup=create_kb(1, 'Вернуться к рецептам 📃',
                                                    'Выбрать другое блюдо 🍲'))
 
@@ -84,11 +85,11 @@ async def list_of_dishes(message: Message, state: FSMContext):
 
 
 @router.callback_query(StateFilter(FSM.get_recipe), Text(text='Добавить в избранное ❤'))
-async def add_to_favorites(callback: CallbackQuery, state: FSMContext, conn: asyncpg.connection.Connection):
+async def add_to_favorites(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
     await callback.answer()
-    if await check_count_recipes(callback.from_user.id, conn):
+    if await check_count_recipes(callback.from_user.id, session):
         data = await state.get_data()
-        result = await add_dish_to_favorites(callback.from_user.id, data['current_dish'],  data['recipe'], conn)
+        result = await add_dish_to_favorites(callback.from_user.id, data['current_dish'],  data['recipe'], session)
         if result:
             await callback.message.answer('Рецепт успешно добавлен в избранное!',
                                           reply_markup=create_kb(1, 'Выбрать другой рецепт 📃',
@@ -125,11 +126,11 @@ async def recipe(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(StateFilter(FSM.favorites), Text(text=['Избранные рецепты ❤',
                                                         'back',
                                                         'forward']))
-async def all_favorites(callback: CallbackQuery, state: FSMContext, conn: asyncpg.connection.Connection):
+async def all_favorites(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
     data = await state.get_data()
     favorites_dishes = data['favorites_dishes']
-    if callback.data in ['back', 'forward']:
+    if callback.data in ('back', 'forward'):
         data['page'] = data['page'] - 1 if callback.data == 'back' else data['page'] + 1
     page = data['page']
     await state.update_data(data)
@@ -139,9 +140,9 @@ async def all_favorites(callback: CallbackQuery, state: FSMContext, conn: asyncp
 
 
 @router.callback_query(StateFilter(FSM.favorites), Text(text='Удалить рецепт из избранных 🗑'))
-async def delete_recipe_handler(callback: CallbackQuery, state: FSMContext, conn: asyncpg.connection.Connection):
+async def delete_recipe_handler(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
     data = await state.get_data()
-    await delete_recipe(callback.from_user.id, data, conn)
+    await delete_recipe(callback.from_user.id, data['favorite_dish_id'], session)
     # await state.update_data(data)
     await callback.message.edit_text('Рецепт удален из списка избранных!\n\n'
                                      'Вернуться к избранным рецептам - \n/favorites',
@@ -150,12 +151,12 @@ async def delete_recipe_handler(callback: CallbackQuery, state: FSMContext, conn
 
 
 @router.callback_query(StateFilter(FSM.favorites))
-async def favorite_recipe(callback: CallbackQuery, state: FSMContext, conn: asyncpg.connection.Connection):
+async def favorite_recipe(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
     await callback.answer()
     data = await state.get_data()
     data['favorite_dish_id'] = callback.data
     await state.update_data(data)
-    recipe = await get_favorite_recipe(callback.data, conn)
+    recipe = await get_favorite_recipe(callback.data, session)
     await callback.message.edit_text(recipe,
                                      reply_markup=create_kb(1,
                                                             'Удалить рецепт из избранных 🗑',

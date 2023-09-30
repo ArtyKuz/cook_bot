@@ -1,9 +1,12 @@
 import asyncio
 
 import aiohttp
-import asyncpg.connection
 import bs4
 from fake_useragent import UserAgent
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from db.models import Dish, User
 
 ua = UserAgent()
 
@@ -66,43 +69,41 @@ async def get_recipe(url: str, name_dish: str) -> str | bool:
         return False
 
 
-async def add_user_in_db(user_id, username, conn: asyncpg.connection.Connection):
+async def add_user_in_db(user_id, username, session: AsyncSession):
     """Функция добавляет пользователя в БД"""
 
-    user = await conn.fetchval('''
-    SELECT user_id FROM users WHERE user_id = $1''', user_id)
+    user = await session.get(User, user_id)
     if not user:
-        await conn.execute('''
-        INSERT INTO users VALUES($1, $2)''', user_id, username)
+        session.add(User(user_id=user_id, username=username))
+        await session.commit()
 
 
-async def add_dish_to_favorites(user_id, dish, recipe, conn: asyncpg.connection.Connection) -> bool:
+async def add_dish_to_favorites(user_id, title: str, recipe: str, session: AsyncSession) -> bool:
     """Добавляет рецепт в список избранных"""
-
-    dish_id = await conn.fetchval('''
-    SELECT dish_id FROM dishes WHERE title = $1''', dish)
-    if dish_id:
-        exists = await conn.fetch('''
-        SELECT * FROM favorite_dishes WHERE user_id = $1 AND dish_id = $2''', user_id, dish_id)
+    user = await session.get(User, user_id)
+    dish: Dish = await session.scalar(select(Dish).where(Dish.title == title))
+    if dish:
+        exists = await session.scalar(select(User).join(User.dishes).where(User.user_id == user_id,
+                                                                           Dish.dish_id == dish.dish_id))
         if exists:
             return False
-        await conn.execute('''
-        INSERT INTO favorite_dishes VALUES($1, $2)''', user_id, dish_id)
+        user.dishes.append(dish)
+        await session.commit()
         return True
     else:
-        dish_id = await conn.fetchval('''
-        INSERT INTO dishes(title, recipe) VALUES($1, $2) RETURNING dish_id''', dish, recipe)
-        await conn.execute('''
-        INSERT INTO favorite_dishes VALUES($1, $2)''', user_id, dish_id)
+        dish = Dish(title=title, recipe=recipe)
+        dish.users.append(user)
+        session.add(dish)
+        await session.commit()
         return True
 
 
-async def get_favorites_dishes(user_id, conn: asyncpg.connection.Connection) -> dict:
+async def get_favorites_dishes(user_id, session: AsyncSession) -> dict:
     """Функция для получения списка избранных блюд пользователя"""
 
-    favorites_dishes = await conn.fetch('''
-    SELECT dish_id, title FROM favorite_dishes JOIN dishes USING(dish_id) WHERE user_id = $1''', user_id)
-    favorites_dishes = {str(dish['dish_id']): dish['title'] for dish in favorites_dishes}
+    dishes = await session.scalars(select(Dish).join(Dish.users).where(User.user_id == user_id))
+    favorites_dishes = {str(dish.dish_id): dish.title for dish in dishes.fetchall()}
+
     pagination = {}
     page = '1'
     pagination[page] = []
@@ -115,38 +116,40 @@ async def get_favorites_dishes(user_id, conn: asyncpg.connection.Connection) -> 
     return pagination
 
 
-async def get_favorite_recipe(dish_id, conn: asyncpg.connection.Connection) -> str:
+async def get_favorite_recipe(dish_id: str, session: AsyncSession) -> str:
     """Функция для получения текста рецепта"""
 
-    recipe = await conn.fetchval('''
-    SELECT recipe FROM dishes WHERE dish_id = $1''', int(dish_id))
-    return recipe
+    dish: Dish = await session.scalar(select(Dish).where(Dish.dish_id == int(dish_id)))
+    return dish.recipe
 
 
-async def delete_recipe(user_id, data: dict, conn: asyncpg.connection.Connection):
+async def delete_recipe(user_id, dish_id: str, session: AsyncSession):
     """Функция для удаления рецепта из списка избранных"""
 
-    await conn.execute('''
-        DELETE FROM favorite_dishes WHERE user_id = $1 AND dish_id = $2''', user_id, int(data['favorite_dish_id']))
+    user = await session.get(User, user_id)
+    dish = await session.get(Dish, int(dish_id))
+    user.dishes.remove(dish)
+    await session.commit()
+    # await conn.execute('''
+    #     DELETE FROM favorite_dishes WHERE user_id = $1 AND dish_id = $2''', user_id, int(data['favorite_dish_id']))
 
 
-async def check_count_recipes(user_id, conn: asyncpg.connection.Connection) -> bool:
+async def check_count_recipes(user_id, session: AsyncSession) -> bool:
     """Функция проверяет, имеет ли пользователь Премиум доступ
     для безлимитного добавления избранных рецептов, в ином случае
     количество избранных рецептов не может превышать 10"""
 
-    result = await conn.fetchval('''
-    SELECT premium FROM users WHERE user_id = $1''', user_id)
-    if result:
+    user = await session.get(User, user_id)
+    if user.premium:
         return True
-    else:
-        count = await conn.fetchval('''
-        SELECT count(*) FROM favorite_dishes WHERE user_id = $1''', user_id)
-        return True if count < 10 else False
+
+    dishes = await session.execute(select(User).join(User.dishes).where(User.user_id == user_id))
+    return True if len(dishes.fetchall()) < 10 else False
 
 
-async def get_premium(user_id, conn: asyncpg.connection.Connection) -> None:
+async def get_premium(user_id, session: AsyncSession) -> None:
     """Устанавливает Премиум статус для пользователя"""
 
-    await conn.execute('''
-    UPDATE users SET premium = True WHERE user_id = $1''', user_id)
+    user = await session.get(User, user_id)
+    user.premium = True
+    await session.commit()
