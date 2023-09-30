@@ -130,8 +130,6 @@ async def delete_recipe(user_id, dish_id: str, session: AsyncSession):
     dish = await session.get(Dish, int(dish_id))
     user.dishes.remove(dish)
     await session.commit()
-    # await conn.execute('''
-    #     DELETE FROM favorite_dishes WHERE user_id = $1 AND dish_id = $2''', user_id, int(data['favorite_dish_id']))
 
 
 async def check_count_recipes(user_id, session: AsyncSession) -> bool:
