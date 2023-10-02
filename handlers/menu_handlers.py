@@ -1,7 +1,7 @@
 from aiogram import Router
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import default_state
+from aiogram.fsm.state import default_state, any_state
 from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,8 +13,7 @@ router = Router()
 
 
 # Этот хэндлер будет срабатывать на команду "/start"
-@router.message(Command(commands=["start"]), StateFilter(default_state))
-@router.message(Command(commands=["start"]), ~StateFilter(default_state))
+@router.message(Command(commands=["start"]), StateFilter(any_state))
 async def process_start_command(message: Message, state: FSMContext, session: AsyncSession):
     await add_user_in_db(message.from_user.id, message.from_user.username, session)
     await state.set_state(FSM.find_dishes)
@@ -24,8 +23,7 @@ async def process_start_command(message: Message, state: FSMContext, session: As
 
 
 # Этот хэндлер будет срабатывать на команду "/favorites"
-@router.message(Command(commands=['favorites']), StateFilter(default_state))
-@router.message(Command(commands=['favorites']), ~StateFilter(default_state))
+@router.message(Command(commands=['favorites']), StateFilter(any_state))
 async def process_favorite_command(message: Message, state: FSMContext, session: AsyncSession):
     data = await state.get_data()
     favorites_dishes: dict = await get_favorites_dishes(message.from_user.id, session)
@@ -41,8 +39,7 @@ async def process_favorite_command(message: Message, state: FSMContext, session:
 
 
 # Этот хэндлер будет срабатывать на команду "/help"
-@router.message(Command(commands=['help']), StateFilter(default_state))
-@router.message(Command(commands=['help']), ~StateFilter(default_state))
+@router.message(Command(commands=['help']), StateFilter(any_state))
 async def process_help_command(message: Message, state: FSMContext):
     await state.set_state(FSM.find_dishes)
     await message.answer('Напиши боту название любого кулинарного блюда и он найдет для тебя несколько рецептов!')
